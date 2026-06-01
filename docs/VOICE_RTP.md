@@ -12,8 +12,8 @@
 
 ## Simülatör / Android emülatör
 
-- **iOS Simulator**, API tabanı `http://127.0.0.1:8080` ise Flutter/RN istemcileri `clientHost` için `127.0.0.1` önerebilir.
-- **Android Emulator**, API `http://10.0.2.2:8080` üzerinden host makineye gider; RTP için Flutter `ApiService.voiceRtpServerHost()` Android’de localhost’u `10.0.2.2` yapar.
+- **iOS Simulator**, API tabanı `http://127.0.0.1:8080` ise React Native / diğer istemciler `clientHost` için `127.0.0.1` önerebilir.
+- **Android Emulator**, API `http://10.0.2.2:8080` üzerinden host makineye gider; RTP için istemci Android’de localhost’u `10.0.2.2` olarak eşlemelidir (resmi uygulama: `getServerBaseUrlForNetwork`).
 - Sunucu URL tabanı **yalnızca host:port** olmalıdır (örn. `http://10.0.2.2:8080`); sona `/api` eklenmemelidir.
 
 ## Sunucu ortam değişkenleri
