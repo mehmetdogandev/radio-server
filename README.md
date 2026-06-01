@@ -16,7 +16,7 @@ Yerel ağda (LAN) çalışan **sesli iletişim**, **mesajlaşma** ve **WebSocket
 ## Hızlı kurulum (Raspberry Pi / Debian)
 
 ```bash
-git clone https://github.com/<org>/radio-server.git
+git clone https://github.com/mehmetdogandev/radio-server.git
 cd radio-server
 sudo ./setup.sh
 ```
