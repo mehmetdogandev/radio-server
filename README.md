@@ -80,6 +80,19 @@ npm run dev
 
 Üretim çalıştırma: `npm run build` → `npm start` (`node dist/index.js`).
 
+## Kalite kontrolü (CI)
+
+Yerel (lint + typecheck + build):
+
+```bash
+npm ci
+npm run ci
+```
+
+GitHub Actions: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — `push` / `pull_request` → `main` veya `master` dallarında çalışır. Deploy yok.
+
+İsteğe bağlı: repo **Settings → Branches → Branch protection** altında `quality` işini zorunlu check yapın.
+
 Sunucu bağımlılıkları **npm** ve `package-lock.json` ile yönetilir. Pi kurulumunda **pnpm** de corepack ile kurulur (isteğe bağlı araçlar için); `npm ci` değişmez.
 
 ## Script yapısı
