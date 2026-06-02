@@ -74,11 +74,25 @@ run "${SCRIPTS}/08-verify.sh"
 MDNS_HOST="$(tr -d '\n' < "${MDNS_HOST_FILE}" 2>/dev/null || compute_mdns_hostname)"
 PORT="$(grep -E '^PORT=' "${SERVER_DIR}/.env" | tail -n1 | cut -d= -f2- || echo 8080)"
 BASE="http://${MDNS_HOST}.local:${PORT}"
+LOCAL_BASE="http://127.0.0.1:${PORT}"
+LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
+LAN_BASE=""
+if [[ -n "${LAN_IP}" ]]; then
+  LAN_BASE="http://${LAN_IP}:${PORT}"
+fi
 
 echo ""
 echo "=============================================="
 echo " AksiyonSoft Radio — kurulum tamamlandı"
-echo " mDNS URL: ${BASE}"
+echo " Local:    ${LOCAL_BASE}"
+echo " Health:   ${LOCAL_BASE}/health"
+echo " Status:   ${LOCAL_BASE}/status"
+if [[ -n "${LAN_BASE}" ]]; then
+  echo " LAN:      ${LAN_BASE}"
+  echo " Health:   ${LAN_BASE}/health"
+  echo " Status:   ${LAN_BASE}/status"
+fi
+echo " mDNS:     ${BASE}"
 echo " Health:   ${BASE}/health"
 echo " Status:   ${BASE}/status"
 echo " systemd:  systemctl status radio-server"
