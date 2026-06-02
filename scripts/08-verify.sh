@@ -29,12 +29,26 @@ systemctl is-active --quiet radio-watchdog.timer || fail "radio-watchdog.timer i
 systemctl is-active --quiet radio-log-prune.timer || fail "radio-log-prune.timer is not active."
 
 log "Checking health endpoint..."
-curl -sf "http://127.0.0.1:${PORT}/health" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' \
-  || fail "/health did not return ok=true on port ${PORT}."
+HEALTH_OK=0
+for _ in {1..20}; do
+  if curl -sf "http://127.0.0.1:${PORT}/health" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then
+    HEALTH_OK=1
+    break
+  fi
+  sleep 1
+done
+[[ "${HEALTH_OK}" -eq 1 ]] || fail "/health did not return ok=true on port ${PORT} after retries."
 
 log "Checking status endpoint..."
-curl -sf "http://127.0.0.1:${PORT}/status" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' \
-  || fail "/status did not return ok=true on port ${PORT}."
+STATUS_OK=0
+for _ in {1..20}; do
+  if curl -sf "http://127.0.0.1:${PORT}/status" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true'; then
+    STATUS_OK=1
+    break
+  fi
+  sleep 1
+done
+[[ "${STATUS_OK}" -eq 1 ]] || fail "/status did not return ok=true on port ${PORT} after retries."
 
 log "Checking UDP RTP listen port..."
 ss -lun | grep -Eq ":${VOICE_RTP_PORT}[[:space:]]" \
