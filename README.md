@@ -89,6 +89,38 @@ ss -lunp | grep 5004
 Loglar: `/var/log/radio/log.txt`, watchdog: `/var/log/radio/watchdog.log`  
 Durum: `systemctl status radio-server`
 
+## Kurulum sonrası dış test (zorunlu öneri)
+
+Bu testler **Pi/Ubuntu sunucu cihazında degil**, ayni LAN'daki veya dis agdaki **kendi bilgisayarinizda** calistirilir.
+
+Test reposu: [github.com/mehmetdogandev/radio-stress-test](https://github.com/mehmetdogandev/radio-stress-test)
+
+Ornek akış:
+
+```bash
+git clone https://github.com/mehmetdogandev/radio-stress-test.git
+cd radio-stress-test
+npm ci
+npm run test:network
+npm run test:voice-load -- --listeners 20 --duration-min 10 --status-interval-sec 5
+```
+
+Komutlar:
+- `test:network`: mDNS `_radio._tcp` kesfi (`aksiyonsoft` filtre), `/health`, `/status`, TCP/UDP probe
+- `test:voice-load`: 1 konusmaci + 20-30 dinleyici senaryosu, test boyunca `/status` sicaklik/memory/UDP metrikleri
+
+Raporlar `radio-stress-test/reports/` altina JSON olarak yazilir.
+
+### Ag degisimi senaryosu (B agi -> C agi)
+
+Mobilde farkli aglara geciste mDNS tekrar kesfini dogrulamak icin:
+
+1. Bilgisayarda B agina bagli iken `npm run test:network` calistirip mDNS sonuclarini al.
+2. Bilgisayari C agina gecir.
+3. Ayni komutu tekrar calistir ve "Ag degisimi karsilastirma modu"nu `E` sec.
+4. Rapor ciktisinda `appeared/disappeared` cihazlari incele.
+5. Yeni agdaki hedef cihazin `/status` cevabinda `network.mdnsHostname` ve `voiceRtpUdpListening=true` oldugunu dogrula.
+
 ## Log temizleme politikası (zaman bağımsız)
 
 - Uygulama log hedefi: `/var/log/radio/log.txt`

@@ -83,6 +83,23 @@ echo " systemd:  systemctl status radio-server"
 echo " Log:      tail -f /var/log/radio/log.txt"
 echo "=============================================="
 
+echo ""
+read -r -p "Test reposu clone komutunu gostereyim mi? (E/H): " SHOW_TEST_REPO
+if [[ "${SHOW_TEST_REPO^^}" == "E" ]]; then
+  read -r -p "Clone tipi secin (ssh/https): " CLONE_TYPE
+  TEST_CLONE_CMD=""
+  if [[ "${CLONE_TYPE,,}" == "ssh" ]]; then
+    TEST_CLONE_CMD="git clone git@github.com:mehmetdogandev/radio-stress-test.git"
+  else
+    TEST_CLONE_CMD="git clone https://github.com/mehmetdogandev/radio-stress-test.git"
+  fi
+  echo ""
+  echo "Dis testleri bu cihazda degil, kendi bilgisayarinizda calistirin."
+  echo "Komut:"
+  echo "  ${TEST_CLONE_CMD}"
+  echo ""
+fi
+
 sleep 2
 if curl -sf "http://127.0.0.1:${PORT}/health" | grep -q '"ok"'; then
   echo "Health check: OK"
