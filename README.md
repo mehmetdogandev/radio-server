@@ -21,13 +21,7 @@ cd radio-server
 sudo ./setup.sh
 ```
 
-Mod seçenekleri:
-
-```bash
-sudo ./setup.sh --mode=prod   # varsayılan, tüm servis adımları
-sudo ./setup.sh --mode=dev    # systemd/watchdog/firewall adımlarını atlar
-sudo ./setup.sh --mode=wsl    # systemd/mDNS/firewall adımlarını atlar
-```
+Kurulum scripti her zaman **production** modunda çalışır.
 
 Doğrudan `setup.sh` yazmak `PATH` içinde olmadığı için çalışmaz. Doğru kullanım:
 - `sudo ./setup.sh`
@@ -43,10 +37,8 @@ Node zaten kuruluysa: `sudo ./setup.sh --skip-node`
 |---|---|---|
 | Raspberry Pi OS Lite (Debian) | Destekli | Üretim için önerilen kurulum |
 | Ubuntu Server (22/24+) | Destekli | Üretim için destekli |
-| WSL2 + Ubuntu + systemd açık | Kısmi destek | Geliştirme/test için uygun |
-| WSL2 + systemd kapalı | Sınırlı | systemd/watchdog/mDNS servis adımları sınırlı |
-
-WSL için öneri: Hyper-V/Virtual Machine Platform aktif + systemd etkin Ubuntu dağıtımı.
+| WSL2 + Ubuntu + systemd açık | Sınırlı destek | Test/dev için kullanılabilir; üretim önerilmez |
+| WSL2 + systemd kapalı | Destek dışı | systemd/mDNS/watchdog akışı tamamlanamaz |
 
 Kurulum sonrası örnek adres:
 
@@ -94,8 +86,25 @@ avahi-browse -r _radio._tcp
 ss -lunp | grep 5004
 ```
 
-Loglar: `/var/log/radio/server.log`, watchdog: `/var/log/radio/watchdog.log`  
+Loglar: `/var/log/radio/log.txt`, watchdog: `/var/log/radio/watchdog.log`  
 Durum: `systemctl status radio-server`
+
+## Log temizleme politikası (zaman bağımsız)
+
+- Uygulama log hedefi: `/var/log/radio/log.txt`
+- Dosya boyutu `1GB` eşiğini geçtiğinde otomatik prune çalışır.
+- Prune işlemi tarih/saat kullanmaz (RTC saat kaymaları etkisizdir).
+- Her prune döngüsünde dosyanın en eski `%2` satırı silinir, en yeni `%98` korunur.
+- Zamanlayıcı: `radio-log-prune.timer` (2 dakikada bir)
+
+Doğrulama komutları:
+
+```bash
+stat -c%s /var/log/radio/log.txt
+wc -l /var/log/radio/log.txt
+systemctl status radio-log-prune.timer --no-pager
+journalctl -u radio-log-prune.service -n 50 --no-pager
+```
 
 ## Geliştirme (yerel makine)
 
@@ -136,6 +145,7 @@ Sunucu bağımlılıkları **npm** ve `package-lock.json` ile yönetilir. Pi kur
 | [`scripts/05-watchdog.sh`](scripts/05-watchdog.sh) | 30 sn `/health` kontrolü |
 | [`scripts/07-firewall.sh`](scripts/07-firewall.sh) | ufw TCP/UDP/mDNS |
 | [`scripts/08-verify.sh`](scripts/08-verify.sh) | kurulum sonu katı doğrulama |
+| [`scripts/09-log-prune.sh`](scripts/09-log-prune.sh) | 1GB üstünde log.txt dosyasının en eski %2 satırını temizler |
 
 Detaylı Pi notları: mobil repodaki [`docs/deployment.md`](../radio-mobile/docs/deployment.md) yalnızca istemci derlemesine odaklanır; sunucu kurulumu **bu README** tek kaynaktır.
 
@@ -172,7 +182,10 @@ Kurulumdan sonra servislerin aç-kapa/reboot sonrası toparlanmasını test edin
 7. Ağdan test:
    - `http://<mdns-host>.local:${PORT:-8080}/status`
 8. Stres testi:
-   - Gün içinde çoklu reboot/power-cycle sonrası `journalctl -u radio-server -u radio-watchdog.timer` kontrolü
+   - Gün içinde çoklu reboot/power-cycle sonrası `journalctl -u radio-server -u radio-watchdog.timer -u radio-log-prune.timer` kontrolü
+9. Prune testi:
+   - `sudo systemctl start radio-log-prune.service`
+   - `stat -c%s /var/log/radio/log.txt` ve `wc -l /var/log/radio/log.txt` ile değişimi doğrulayın
 
 UDP/TCP hızlı doğrulama:
 

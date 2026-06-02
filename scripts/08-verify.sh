@@ -9,7 +9,7 @@ TARGET_USER="$(resolve_target_user)"
 TARGET_HOME="$(resolve_target_home "${TARGET_USER}")"
 PORT="$(read_env_var PORT || echo 8080)"
 VOICE_RTP_PORT="$(read_env_var VOICE_RTP_PORT || echo 5004)"
-MODE="${RADIO_SETUP_MODE:-prod}"
+LOG_FILE="${LOG_DIR}/log.txt"
 
 log "Verifying runtime versions for ${TARGET_USER}..."
 run_as_target_user "${TARGET_USER}" env HOME="${TARGET_HOME}" bash -lc '
@@ -24,12 +24,9 @@ pnpm -v
 [[ -f "${SERVER_DIR}/dist/index.js" ]] || fail "dist/index.js missing; build failed."
 
 log "Checking service status..."
-if [[ "${MODE}" == "prod" ]]; then
-  systemctl is-active --quiet radio-server.service || fail "radio-server.service is not active."
-  systemctl is-active --quiet radio-watchdog.timer || fail "radio-watchdog.timer is not active."
-else
-  warn "Skipping systemd checks in mode=${MODE}."
-fi
+systemctl is-active --quiet radio-server.service || fail "radio-server.service is not active."
+systemctl is-active --quiet radio-watchdog.timer || fail "radio-watchdog.timer is not active."
+systemctl is-active --quiet radio-log-prune.timer || fail "radio-log-prune.timer is not active."
 
 log "Checking health endpoint..."
 curl -sf "http://127.0.0.1:${PORT}/health" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' \
@@ -43,12 +40,19 @@ log "Checking UDP RTP listen port..."
 ss -lun | grep -Eq ":${VOICE_RTP_PORT}[[:space:]]" \
   || fail "UDP RTP port ${VOICE_RTP_PORT} is not listening."
 
-if [[ "${MODE}" == "prod" ]] && systemctl is-active --quiet avahi-daemon; then
+log "Checking log file and prune configuration..."
+[[ -f "${LOG_FILE}" ]] || fail "Log file missing: ${LOG_FILE}"
+[[ -w "${LOG_FILE}" ]] || fail "Log file is not writable: ${LOG_FILE}"
+[[ -x "/usr/local/bin/radio-log-prune.sh" ]] || fail "Prune script not executable: /usr/local/bin/radio-log-prune.sh"
+[[ -f "/etc/systemd/system/radio-log-prune.service" ]] || fail "Missing systemd unit: radio-log-prune.service"
+[[ -f "/etc/systemd/system/radio-log-prune.timer" ]] || fail "Missing systemd unit: radio-log-prune.timer"
+
+if systemctl is-active --quiet avahi-daemon; then
   log "Checking mDNS publication..."
   avahi-browse -a -t 2>/dev/null | grep -q "_radio._tcp" \
     || warn "mDNS _radio._tcp service not found in avahi browse output."
 else
-  warn "Skipping mDNS verify in mode=${MODE} (or avahi inactive)."
+  warn "avahi-daemon not active; skipping mDNS verify."
 fi
 
 log "Verification checks passed."

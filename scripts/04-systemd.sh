@@ -27,8 +27,8 @@ RestartSec=5
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
-StandardOutput=append:${LOG_DIR}/server.log
-StandardError=append:${LOG_DIR}/server.err.log
+StandardOutput=append:${LOG_DIR}/log.txt
+StandardError=append:${LOG_DIR}/log.txt
 
 [Install]
 WantedBy=multi-user.target

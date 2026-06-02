@@ -11,13 +11,14 @@ source "${SERVER_DIR}/scripts/lib/common.sh"
 require_root
 
 SKIP_NODE=0
-MODE="prod"
 for arg in "$@"; do
   case "${arg}" in
     --skip-node) SKIP_NODE=1 ;;
-    --mode=*) MODE="${arg#*=}" ;;
+    --mode=*|--dev|--wsl)
+      fail "Mode options were removed. setup.sh always runs in production mode."
+      ;;
     -h|--help)
-      echo "Usage: sudo ./setup.sh [--skip-node] [--mode=prod|dev|wsl]"
+      echo "Usage: sudo ./setup.sh [--skip-node]"
       exit 0
       ;;
   esac
@@ -35,15 +36,6 @@ fi
 TARGET_USER="$(resolve_target_user)"
 TARGET_HOME="$(resolve_target_home "${TARGET_USER}")"
 log "Install target user: ${TARGET_USER} (home: ${TARGET_HOME})"
-log "Install mode: ${MODE}"
-
-if [[ "${MODE}" != "prod" && "${MODE}" != "dev" && "${MODE}" != "wsl" ]]; then
-  fail "Invalid mode '${MODE}'. Use --mode=prod|dev|wsl"
-fi
-
-if grep -qi microsoft /proc/version 2>/dev/null; then
-  log "WSL environment detected."
-fi
 
 run() {
   echo ""
@@ -54,21 +46,13 @@ run() {
 if [[ "${SKIP_NODE}" -eq 0 ]]; then
   run "${SCRIPTS}/01-node.sh"
 fi
-if [[ "${MODE}" != "wsl" ]]; then
-  run "${SCRIPTS}/06-mdns.sh"
-fi
+run "${SCRIPTS}/06-mdns.sh"
 run "${SCRIPTS}/02-env.sh"
 run "${SCRIPTS}/03-deps-build.sh"
-if [[ "${MODE}" == "prod" ]]; then
-  run "${SCRIPTS}/04-systemd.sh"
-  run "${SCRIPTS}/05-watchdog.sh"
-  run "${SCRIPTS}/07-firewall.sh"
-elif [[ "${MODE}" == "dev" ]]; then
-  log "dev mode: skipping systemd/watchdog/firewall steps."
-elif [[ "${MODE}" == "wsl" ]]; then
-  log "wsl mode: skipping systemd/watchdog/mdns/firewall steps."
-fi
-export RADIO_SETUP_MODE="${MODE}"
+run "${SCRIPTS}/04-systemd.sh"
+run "${SCRIPTS}/05-watchdog.sh"
+run "${SCRIPTS}/07-firewall.sh"
+run "${SCRIPTS}/09-log-prune.sh"
 run "${SCRIPTS}/08-verify.sh"
 
 MDNS_HOST="$(tr -d '\n' < "${MDNS_HOST_FILE}" 2>/dev/null || compute_mdns_hostname)"
@@ -96,7 +80,7 @@ echo " mDNS:     ${BASE}"
 echo " Health:   ${BASE}/health"
 echo " Status:   ${BASE}/status"
 echo " systemd:  systemctl status radio-server"
-echo " Log:      tail -f /var/log/radio/server.log"
+echo " Log:      tail -f /var/log/radio/log.txt"
 echo "=============================================="
 
 sleep 2
