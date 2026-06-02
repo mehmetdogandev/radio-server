@@ -94,7 +94,7 @@ if (process.env.NODE_ENV === 'production') {
     console.error(
       '❌ CORS_ORIGINS must be set to an explicit comma-separated origin list in production (not * or empty).',
     );
-    console.error('   Example: CORS_ORIGINS=http://192.168.1.167:8080,http://204.168.162.200:8080');
+    console.error('   Example: CORS_ORIGINS=http://aksiyonsoft-radio-xxxxxx.local:8080');
     process.exit(1);
   }
 }
