@@ -135,7 +135,7 @@ Sunucu UDP’yi `VOICE_RTP_PORT` (varsayılan **5004**) üzerinde dinler. Paket 
 - Android/iOS cleartext: `*.local` ve geliştirme localhost’ları native allowlist’te tanımlıdır.
 - Emülatör: Android’de host makine `10.0.2.2`; iOS simülatörde `127.0.0.1`.
 
-Resmi APK: [mehmetdogandev.com/radio-mobile-apk/release/](https://mehmetdogandev.com/radio-mobile-apk/release/)
+Resmi APK: [aksiyonsoft.com/radio-mobile/android/release/](https://aksiyonsoft.com/radio-mobile/android/release/)
 
 ## 9. Minimal istemci pseudocode
 

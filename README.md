@@ -2,7 +2,7 @@
 
 Yerel ağda (LAN) çalışan **sesli iletişim**, **mesajlaşma** ve **WebSocket** sunucusu. Şirketler ve geliştiriciler bu repoyu klonlayıp kendi donanımlarında (Raspberry Pi, Linux sunucu vb.) host edebilir; ardından kendi mobil veya web istemcilerini bağlayabilir.
 
-> **Resmi mobil uygulama** ayrı bir **private** repodadır. APK indirmek için: [mehmetdogandev.com/radio-mobile-apk/release/](https://mehmetdogandev.com/radio-mobile-apk/release/)  
+> **Resmi mobil uygulama** ayrı bir **private** repodadır. APK indirmek için: [aksiyonsoft.com/radio-mobile/android/release/](https://aksiyonsoft.com/radio-mobile/android/release/)  
 > Kendi istemcinizi yazmak için: [`docs/ISTEMCI_ENTEGRASYONU.md`](docs/ISTEMCI_ENTEGRASYONU.md)
 
 ## Özellikler
