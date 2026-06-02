@@ -54,10 +54,15 @@ upsert_env HTTP_LISTEN_HOST "0.0.0.0"
 upsert_env VOICE_RTP_PORT "5004"
 upsert_env DATABASE_PATH "./data/radio.db"
 upsert_env MDNS_HOSTNAME "${MDNS_HOST}"
-upsert_env CORS_ORIGINS "http://${MDNS_HOST}.local:${PORT}"
+LAN_IP="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
+if [[ -n "${LAN_IP}" ]]; then
+  upsert_env CORS_ORIGINS "http://${MDNS_HOST}.local:${PORT},http://${LAN_IP}:${PORT}"
+  log "mDNS host: ${MDNS_HOST}.local  CORS: http://${MDNS_HOST}.local:${PORT},http://${LAN_IP}:${PORT}"
+else
+  upsert_env CORS_ORIGINS "http://${MDNS_HOST}.local:${PORT}"
+  log "mDNS host: ${MDNS_HOST}.local  CORS: http://${MDNS_HOST}.local:${PORT}"
+fi
 upsert_env NODE_ENV "production"
 upsert_env MESSAGE_MAX_LENGTH "500"
 upsert_env RATE_LIMIT_WINDOW_MS "60000"
 upsert_env RATE_LIMIT_MAX_REQUESTS "100"
-
-log "mDNS host: ${MDNS_HOST}.local  CORS: http://${MDNS_HOST}.local:${PORT}"
