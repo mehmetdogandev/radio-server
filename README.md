@@ -21,9 +21,32 @@ cd radio-server
 sudo ./setup.sh
 ```
 
+Mod seçenekleri:
+
+```bash
+sudo ./setup.sh --mode=prod   # varsayılan, tüm servis adımları
+sudo ./setup.sh --mode=dev    # systemd/watchdog/firewall adımlarını atlar
+sudo ./setup.sh --mode=wsl    # systemd/mDNS/firewall adımlarını atlar
+```
+
+Doğrudan `setup.sh` yazmak `PATH` içinde olmadığı için çalışmaz. Doğru kullanım:
+- `sudo ./setup.sh`
+- veya `sudo bash setup.sh`
+
 `setup.sh` sırasıyla: Node 24 (nvm), Avahi mDNS, `.env` (JWT + portlar), `npm ci` + build, systemd, health watchdog, isteğe bağlı ufw kuralları.
 
 Node zaten kuruluysa: `sudo ./setup.sh --skip-node`
+
+## Platform desteği
+
+| Platform | Durum | Not |
+|---|---|---|
+| Raspberry Pi OS Lite (Debian) | Destekli | Üretim için önerilen kurulum |
+| Ubuntu Server (22/24+) | Destekli | Üretim için destekli |
+| WSL2 + Ubuntu + systemd açık | Kısmi destek | Geliştirme/test için uygun |
+| WSL2 + systemd kapalı | Sınırlı | systemd/watchdog/mDNS servis adımları sınırlı |
+
+WSL için öneri: Hyper-V/Virtual Machine Platform aktif + systemd etkin Ubuntu dağıtımı.
 
 Kurulum sonrası örnek adres:
 
@@ -41,6 +64,8 @@ http://aksiyonsoft-radio-a1b2c3.local:8080/health
 
 Dinleme adresi: `HTTP_LISTEN_HOST=0.0.0.0` (LAN erişimi).
 
+`PORT=80` kullanmak isterseniz desteklenir. Systemd unit düşük port bind capability ile ayarlanır.
+
 ## JWT ve güvenlik
 
 - `JWT_SECRET` yalnızca **sunucu** `.env` dosyasında tutulur; mobil veya web istemciye gömülmez.
@@ -55,6 +80,9 @@ Play Store’daki resmi uygulama her evdeki Pi’ye ayrı bağlanır; tüm kulla
 ```bash
 # Health
 curl -sf http://127.0.0.1:8080/health | jq .ok
+
+# Status (runtime + host + udp/mdns)
+curl -sf http://127.0.0.1:8080/status | jq .ok
 
 # Servisler
 systemctl is-active radio-server radio-watchdog.timer avahi-daemon
@@ -107,6 +135,7 @@ Sunucu bağımlılıkları **npm** ve `package-lock.json` ile yönetilir. Pi kur
 | [`scripts/04-systemd.sh`](scripts/04-systemd.sh) | `radio-server.service` |
 | [`scripts/05-watchdog.sh`](scripts/05-watchdog.sh) | 30 sn `/health` kontrolü |
 | [`scripts/07-firewall.sh`](scripts/07-firewall.sh) | ufw TCP/UDP/mDNS |
+| [`scripts/08-verify.sh`](scripts/08-verify.sh) | kurulum sonu katı doğrulama |
 
 Detaylı Pi notları: mobil repodaki [`docs/deployment.md`](../radio-mobile/docs/deployment.md) yalnızca istemci derlemesine odaklanır; sunucu kurulumu **bu README** tek kaynaktır.
 
@@ -126,6 +155,30 @@ Detaylı Pi notları: mobil repodaki [`docs/deployment.md`](../radio-mobile/docs
 | `health` başarısız | `journalctl -u radio-server -n 50` |
 | RTP kayıt hatası | `npm run build` + `systemctl restart radio-server` |
 | 8080 dinlemiyor | `ss -ltnp \| grep 8080` |
+
+## Reboot ve dayanıklılık runbook
+
+Kurulumdan sonra servislerin aç-kapa/reboot sonrası toparlanmasını test edin:
+
+1. `sudo ./setup.sh`
+2. `curl -sf http://127.0.0.1:${PORT:-8080}/health`
+3. `curl -sf http://127.0.0.1:${PORT:-8080}/status`
+4. `systemctl is-active radio-server radio-watchdog.timer avahi-daemon`
+5. `sudo reboot`
+6. Cihaz açılınca tekrar bağlanın:
+   - `systemctl status radio-server --no-pager`
+   - `curl -sf http://127.0.0.1:${PORT:-8080}/status`
+   - `avahi-browse -r _radio._tcp`
+7. Ağdan test:
+   - `http://<mdns-host>.local:${PORT:-8080}/status`
+8. Stres testi:
+   - Gün içinde çoklu reboot/power-cycle sonrası `journalctl -u radio-server -u radio-watchdog.timer` kontrolü
+
+UDP/TCP hızlı doğrulama:
+
+```bash
+ss -ltnup | grep -E '(:80|:8080|:5004|:5353)'
+```
 
 Ses / RTP ayrıntıları: [`docs/VOICE_RTP.md`](docs/VOICE_RTP.md)  
 İstemci entegrasyonu: [`docs/ISTEMCI_ENTEGRASYONU.md`](docs/ISTEMCI_ENTEGRASYONU.md)

@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import path from 'node:path';
+import os from 'node:os';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
@@ -251,6 +253,19 @@ const MDNS_HTTP_BASE =
     ? `http://${MDNS_HOSTNAME}.local:${PORT}`
     : undefined;
 
+function readCpuTemperatureC(): number | null {
+  try {
+    const raw = fs.readFileSync('/sys/class/thermal/thermal_zone0/temp', 'utf8').trim();
+    const milli = Number(raw);
+    if (!Number.isFinite(milli)) {
+      return null;
+    }
+    return Math.round((milli / 1000) * 10) / 10;
+  } catch {
+    return null;
+  }
+}
+
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
@@ -269,6 +284,42 @@ app.get('/health', (_req, res) => {
       /** UDP kapalı veya isteğe bağlı yumuşak başarısızlık — ses RTP kullanılamaz. */
       voiceMediaDegraded: !voiceRtpServer.isUdpListening(),
       ...(voiceMediaMetrics ? { voiceRtpMetrics: voiceMediaMetrics.snapshot() } : {}),
+    },
+  });
+});
+
+app.get('/status', (_req, res) => {
+  const mem = process.memoryUsage();
+  const freeMem = os.freemem();
+  const totalMem = os.totalmem();
+  const cpuTempC = readCpuTemperatureC();
+  res.json({
+    ok: true,
+    service: 'radio-server',
+    version: APP_VERSION,
+    gitSha: APP_GIT_SHA,
+    uptimeSec: Math.floor(process.uptime()),
+    pid: process.pid,
+    cwd: process.cwd(),
+    host: {
+      hostname: os.hostname(),
+      platform: os.platform(),
+      arch: os.arch(),
+      loadavg: os.loadavg(),
+      cpuTempC,
+    },
+    memory: {
+      rss: mem.rss,
+      heapUsed: mem.heapUsed,
+      heapTotal: mem.heapTotal,
+      freeMem,
+      totalMem,
+    },
+    network: {
+      port: PORT,
+      voiceRtpPort: Number(process.env.VOICE_RTP_PORT ?? 5004),
+      voiceRtpUdpListening: voiceRtpServer.isUdpListening(),
+      ...(MDNS_HOSTNAME ? { mdnsHostname: MDNS_HOSTNAME, httpBaseUrl: MDNS_HTTP_BASE } : {}),
     },
   });
 });

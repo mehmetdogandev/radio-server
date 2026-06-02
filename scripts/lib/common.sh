@@ -13,6 +13,44 @@ log() { echo "[radio-setup] $*"; }
 warn() { echo "[radio-setup] WARN: $*" >&2; }
 fail() { echo "[radio-setup] ERROR: $*" >&2; exit 1; }
 
+resolve_target_user() {
+  if [[ -n "${RADIO_TARGET_USER:-}" ]]; then
+    echo "${RADIO_TARGET_USER}"
+    return
+  fi
+  if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]]; then
+    echo "${SUDO_USER}"
+    return
+  fi
+  local guessed
+  guessed="$(logname 2>/dev/null || true)"
+  if [[ -n "${guessed}" && "${guessed}" != "root" ]]; then
+    echo "${guessed}"
+    return
+  fi
+  echo "root"
+}
+
+resolve_target_home() {
+  local user="${1:-}"
+  [[ -n "${user}" ]] || fail "resolve_target_home requires user"
+  local home
+  home="$(getent passwd "${user}" | cut -d: -f6 || true)"
+  [[ -n "${home}" ]] || fail "Could not resolve home directory for user '${user}'"
+  echo "${home}"
+}
+
+run_as_target_user() {
+  local target_user="${1:-}"
+  shift || true
+  [[ -n "${target_user}" ]] || fail "run_as_target_user requires user"
+  if [[ "${target_user}" == "root" ]]; then
+    "$@"
+  else
+    sudo -u "${target_user}" "$@"
+  fi
+}
+
 require_root() {
   if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
     fail "Run setup.sh with sudo (root required for systemd, avahi, apt)."
@@ -36,16 +74,15 @@ compute_mdns_hostname() {
 }
 
 load_nvm() {
-  export NVM_DIR="${NVM_DIR:-/root/.nvm}"
+  local target_user target_home
+  target_user="$(resolve_target_user)"
+  target_home="$(resolve_target_home "${target_user}")"
+  export NVM_DIR="${NVM_DIR:-${target_home}/.nvm}"
   if [[ -f "${NVM_DIR}/nvm.sh" ]]; then
     # shellcheck source=/dev/null
     . "${NVM_DIR}/nvm.sh"
-  elif [[ -f "/home/${SUDO_USER:-pi}/.nvm/nvm.sh" ]]; then
-    NVM_DIR="/home/${SUDO_USER:-pi}/.nvm"
-    # shellcheck source=/dev/null
-    . "${NVM_DIR}/nvm.sh"
   else
-    fail "nvm not found. Run 01-node.sh first."
+    fail "nvm not found at ${NVM_DIR}. Run 01-node.sh first."
   fi
 }
 
